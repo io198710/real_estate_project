@@ -123,6 +123,18 @@ def make_plots(data, plots_dir):
     plt.savefig(os.path.join(plots_dir, "05_корреляции.png"), dpi=100)
     plt.close()
 
+    # 6. Источники цены сделки - итог шага очистки данных
+    src = data["источник_цены"].value_counts()
+    plt.figure(figsize=(8, 5))
+    plt.bar(src.index, src.values, color="steelblue")
+    plt.title("Откуда взята цена сделки (результат очистки)")
+    plt.ylabel("Сделок")
+    for i, v in enumerate(src.values):
+        plt.text(i, v, f"{v:,}".replace(",", " "), ha="center", va="bottom")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plots_dir, "06_источники_цены.png"), dpi=100)
+    plt.close()
+
     print("Графики сохранены в", plots_dir)
 
 
@@ -141,7 +153,7 @@ def plot_interactive(data, plots_dir):
     fig = px.bar(by_class, x="Класс жилья", y="Средняя цена кв.м",
                  color="Класс жилья", text="Сделок",
                  title="Средняя цена кв.м по классам жилья (по сделкам)")
-    fig.write_html(os.path.join(plots_dir, "06_интерактивный_график.html"))
+    fig.write_html(os.path.join(plots_dir, "07_интерактивный_график.html"))
     print("Интерактивный график сохранён")
 
 
@@ -200,6 +212,24 @@ def make_excel_report(data, metrics, out_file):
     # лист 1: все метрики
     stats_df = pd.DataFrame(flatten_metrics(metrics), columns=["Показатель", "Значение"])
 
+    # лист 1а: отчёт об очистке данных (что удалено/заполнено)
+    clean_rows = flatten_metrics({"очистка_данных":
+                                  metrics.get("очистка_данных", {})})
+    clean_df = pd.DataFrame(clean_rows, columns=["Показатель", "Значение"])
+
+    # лист 1б: результаты ML-моделей (регрессия + классификация)
+    reg = metrics.get("регрессия_предполагаемая_цена", {})
+    clf = metrics.get("классификация_переуступки", {})
+    ml_rows = [("РЕГРЕССИЯ - предполагаемая цена ДДУ", "")]
+    ml_rows += [(k, str(v)) for k, v in reg.items()
+                if k != "важность_признаков"]
+    ml_rows += [("важность признаков:", "")]
+    ml_rows += [(k, str(v))
+                for k, v in reg.get("важность_признаков", {}).items()]
+    ml_rows += [("", ""), ("КЛАССИФИКАЦИЯ - переуступка", "")]
+    ml_rows += [(k, str(v)) for k, v in clf.items()]
+    ml_df = pd.DataFrame(ml_rows, columns=["Показатель", "Значение"])
+
     # лист 2: средние по классам жилья
     by_class = (data.groupby("Класс ЖК")
                 .agg(sdelok=("цена_квм", "size"),
@@ -226,6 +256,8 @@ def make_excel_report(data, metrics, out_file):
 
     with pd.ExcelWriter(out_file, engine="openpyxl") as writer:
         stats_df.to_excel(writer, sheet_name="Метрики", index=False)
+        clean_df.to_excel(writer, sheet_name="Очистка данных", index=False)
+        ml_df.to_excel(writer, sheet_name="ML-модели", index=False)
         by_class.to_excel(writer, sheet_name="По классам жилья", index=False)
         monthly.to_excel(writer, sheet_name="Динамика и прогноз 2026", index=False)
         pivot.to_excel(writer, sheet_name="Цена по стадии и году")

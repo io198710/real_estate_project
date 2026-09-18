@@ -16,6 +16,7 @@
 Запуск:  python main.py  (или python 05_automation/pipeline.py)
 """
 
+import json
 import logging
 import os
 import sys
@@ -89,6 +90,13 @@ def run_pipeline():
     # ---------- ШАГ 3. Анализ данных ----------
     log.info("ШАГ 3. Анализ данных (ML + прогноз 2026)")
     metrics, data = analysis.run_analysis(clean=clean, zhk=zhk)
+
+    # добавляем отчёт об очистке в метрики (первым блоком)
+    clean_report = {"строк_в_сырых_данных": len(deals), **clean_report}
+    metrics = {"очистка_данных": clean_report, **metrics}
+    with open(os.path.join(config.OUTPUT_DIR, "metrics.json"),
+              "w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=2)
     log.info("Регрессия (предполагаемая цена): %s",
              metrics["регрессия_предполагаемая_цена"])
     log.info("Классификация (переуступка): %s", metrics["классификация_переуступки"])
