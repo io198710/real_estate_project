@@ -77,7 +77,8 @@ def make_plots(data, plots_dir):
     plt.figure(figsize=(10, 6))
     order = (data.groupby("Класс ЖК")["цена_квм"].median()
              .sort_values().index.tolist())
-    sns.boxplot(data=data, x="Класс ЖК", y="цена_квм", order=order)
+    sns.boxplot(data=data, x="Класс ЖК", y="цена_квм", order=order,
+                showfliers=False)
     plt.title("Цена кв.м по классам жилья")
     plt.xticks(rotation=20)
     plt.tight_layout()
@@ -105,7 +106,8 @@ def make_plots(data, plots_dir):
     # 4. Цена по стадии сдачи (котлован дешевле ВВЭ)
     plt.figure(figsize=(12, 6))
     stages = [s for s in STAGE_ORDER if s in set(data["стадия_сдачи"])]
-    sns.boxplot(data=data, x="стадия_сдачи", y="цена_квм", order=stages)
+    sns.boxplot(data=data, x="стадия_сдачи", y="цена_квм", order=stages,
+                showfliers=False)
     plt.title("Цена кв.м по стадии строительства на момент сделки")
     plt.xticks(rotation=20, fontsize=9)
     plt.tight_layout()
@@ -178,8 +180,14 @@ def make_pdf_report(metrics, plots_dir, out_file):
         Paragraph("Ключевые метрики", head_style),
     ]
 
-    # таблица с метриками
-    rows = [["Показатель", "Значение"]] + flatten_metrics(metrics)
+    # таблица с метриками (ячейки - Paragraph, чтобы длинный текст переносился)
+    head_cell = ParagraphStyle("headcell", fontName="DejaVu", fontSize=9,
+                               textColor=colors.white)
+    cell = ParagraphStyle("cell", fontName="DejaVu", fontSize=9)
+    rows = [[Paragraph("Показатель", head_cell),
+             Paragraph("Значение", head_cell)]]
+    rows += [[Paragraph(k, cell), Paragraph(v, cell)]
+             for k, v in flatten_metrics(metrics)]
     table = Table(rows, colWidths=[11 * cm, 6 * cm])
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), "DejaVu"),
