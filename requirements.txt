@@ -1,0 +1,13 @@
+pandas
+numpy
+openpyxl
+matplotlib
+seaborn
+plotly
+scikit-learn
+statsmodels
+psycopg2-binary
+requests
+reportlab
+python-docx
+xgboost
